@@ -4,4 +4,5 @@ rm -rf module/build
 rm -rf build
 
 export ANDROID_HOME=~/android-sdk
-./gradlew :module:assembleRelease --no-build-cache
+#./gradlew :module:assembleRelease --no-build-cache
+./gradlew :module:zipRelease

@@ -28,15 +28,24 @@
  */
 #pragma once
 #define A64_MAX_BACKUPS 256
+#define A64_MAX_INSTRUCTIONS 5
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+    typedef struct FunctionPrologue{
+        uint32_t instructions[A64_MAX_BACKUPS];
+    } FunctionPrologue;
 
-    void A64HookFunction(void *const symbol, void *const replace, void **result);
+    void A64HookFunction(void *const symbol, void *const replace, 
+                            void **result, FunctionPrologue* backup);
     void *A64HookFunctionV(void *const symbol, void *const replace,
-                           void *const rwx, const uintptr_t rwx_size);
+                            void *const rwx, const uintptr_t rwx_size);
+    
+    void RevokeHook(void *const symbol, FunctionPrologue backup);
 
+    void RevokeRWX();
 #ifdef __cplusplus
 }
 #endif

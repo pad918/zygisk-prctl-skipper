@@ -37,7 +37,7 @@
 #if defined(__aarch64__)
 
 #include "And64InlineHook.hpp"
-#define   A64_MAX_INSTRUCTIONS 5
+
 #define   A64_MAX_REFERENCES   (A64_MAX_INSTRUCTIONS * 2)
 #define   A64_NOP              0xd503201fu
 #define   A64_JNIEXPORT        __attribute__((visibility("default")))
@@ -123,7 +123,9 @@ public:
 #define __make_rwx(p, n)           ::mprotect(__ptr_align(p), \
                                               __page_align(__uintval(p) + n) != __page_align(__uintval(p)) ? __page_align(n) + __page_size : __page_align(n), \
                                               PROT_READ | PROT_WRITE | PROT_EXEC)
-
+#define __make_rx(p, n)           ::mprotect(__ptr_align(p), \
+                                              __page_align(__uintval(p) + n) != __page_align(__uintval(p)) ? __page_align(n) + __page_size : __page_align(n), \
+                                              PROT_READ | PROT_EXEC)
 //-------------------------------------------------------------------------
 
 static bool __fix_branch_imm(instruction inpp, instruction outpp, context *ctxp)
@@ -574,14 +576,19 @@ extern "C" {
 
     //-------------------------------------------------------------------------
 
-    A64_JNIEXPORT void A64HookFunction(void *const symbol, void *const replace, void **result)
+    A64_JNIEXPORT void A64HookFunction(void *const symbol, void *const replace, void **result, FunctionPrologue* backup)
     {
+        /* Backup the original function */
+        for(int i=0; i<A64_MAX_INSTRUCTIONS; i++){
+            backup->instructions[i] = *((uint32_t*)symbol+i);
+        }
+
         void *trampoline = NULL;
         if (result != NULL) {
             trampoline = FastAllocateTrampoline();
             *result = trampoline;
             if (trampoline == NULL) return;
-        } //if
+        }
 
         // fix Android 10 .text segment is read-only by default
         __make_rwx(symbol, 5 * sizeof(size_t));
@@ -590,6 +597,34 @@ extern "C" {
         if (trampoline == NULL && result != NULL) {
             *result = NULL;
         } //if
+
+    }
+
+    //-------------------------------------------------------------------------
+    /* 
+        Restore a function as it
+        was before being hooked
+    */
+    A64_JNIEXPORT void RevokeHook(void *const symbol, FunctionPrologue backup)
+    {
+        uint32_t* const func = static_cast<uint32_t*const>(symbol);
+        for(int i=0; i<A64_MAX_INSTRUCTIONS; i++){
+            *(func+i) = backup.instructions[i];
+        }
+        __flush_cache(symbol, 5 * sizeof(uint32_t));
+        __make_rx(symbol, 5 * sizeof(size_t));
+    }
+
+    //-------------------------------------------------------------------------
+
+    /*
+        Restore page permisions to RX.
+        Only call after removing all 
+        hooks!
+    */
+    A64_JNIEXPORT void RevokeRWX()
+    {
+        __make_rwx(__insns_pool, sizeof(__insns_pool));   
     }
 }
 
