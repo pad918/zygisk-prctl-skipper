@@ -56,6 +56,9 @@ thus, we simply don't include the logic on the other platforms. */
 
         }
         if (process) env->ReleaseStringUTFChars(args->nice_name, process);
+        
+        // Make zygisk unload all the modules before starting the app
+        api->setOption(zygisk::Option::DLCLOSE_MODULE_LIBRARY);
     }
 
 private:

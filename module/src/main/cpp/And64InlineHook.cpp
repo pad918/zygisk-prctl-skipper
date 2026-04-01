@@ -624,7 +624,7 @@ extern "C" {
     */
     A64_JNIEXPORT void RevokeRWX()
     {
-        __make_rwx(__insns_pool, sizeof(__insns_pool));   
+        __make_rx(__insns_pool, sizeof(__insns_pool));   
     }
 }
 
